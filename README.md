@@ -1,4 +1,4 @@
-# Go HTTP Server Toolkit (from TCP)
+# Custom Go HTTP Server From Scratch
 
 [![Go Version](https://img.shields.io/badge/go-1.24.2+-blue.svg)](https://golang.org/dl/)
 
