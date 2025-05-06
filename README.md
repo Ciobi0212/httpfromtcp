@@ -27,7 +27,7 @@ To build an HTTP server using this toolkit, you would typically:
 
 1.  **Initialize the Server Core (`server.Serve(port)`):
     *   Starts a TCP listener on a specified port.
-    *   The core component manages incoming connections, typically launching a new goroutine for each to handle requests concurrently.
+    *   The core component manages incoming connections, launching a new goroutine for each to handle requests concurrently.
     *   It utilizes a router for dispatching requests.
 
 2.  **Define Request Handlers:
@@ -88,24 +88,19 @@ To build an HTTP server using this toolkit, you would typically:
        h.Add("Content-Type", "text/plain")
        h.Add("Content-Length", strconv.Itoa(len(body)))
        
-       // Assuming response.Ok is a defined constant in your response package
-       res.WriteStatusLine(response.Ok, "OK") 
-       res.WriteHeaders(h)
+       res.WriteHeaders(response.Ok, h)
        res.WriteBody([]byte(body))
        return nil
    }
 
    func main() {
-       // Assuming server.Serve is the constructor/initializer for your server
-       // and it takes the port number.
        srv, err := server.Serve(8080) 
        if err != nil {
            fmt.Printf("Failed to start server: %v\n", err)
            return
        }
        defer srv.Close() // Assuming a Close method exists
-       
-       // Assuming srv.Router is accessible and has an AddHandler method
+      
        srv.Router.AddHandler(response.GET, "/greet", handleGreeting)
        // Add more routes...
        
