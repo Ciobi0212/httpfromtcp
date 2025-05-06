@@ -32,7 +32,6 @@ func main() {
 	server.Router.AddHandler(response.GET, "/myproblem", handleMyProblem)
 	server.Router.AddHandler(response.GET, "/httpbin/html", handleHttpBin)
 	server.Router.AddHandler(response.GET, "/video", handleVideo)
-	response.PrintRouterTree(server.Router.Root, "")
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -50,10 +49,9 @@ func handleVideo(res response.ResponseWriter, req *request.Request) *response.Ha
 		}
 	}
 
-	res.WriteStatusLine(response.Ok)
 	headers := headers.NewHeaders()
 	headers.Add("Content-type", "video/mp4")
-	res.WriteHeaders(headers)
+	res.WriteHeaders(response.Ok, headers)
 
 	res.WriteBody(video)
 
@@ -61,8 +59,6 @@ func handleVideo(res response.ResponseWriter, req *request.Request) *response.Ha
 }
 
 func handleYourProblem(res response.ResponseWriter, req *request.Request) *response.HandlerError {
-
-	res.WriteStatusLine(response.BadRequest)
 	h := headers.NewHeaders()
 
 	body := `<html>
@@ -79,7 +75,7 @@ func handleYourProblem(res response.ResponseWriter, req *request.Request) *respo
 	h.Add("Content-type", "text/html")
 	h.Add("Content-length", strconv.Itoa(len(bytes)))
 
-	res.WriteHeaders(h)
+	res.WriteHeaders(response.BadRequest, h)
 	res.WriteBody(bytes)
 
 	return nil
@@ -94,8 +90,6 @@ func handleHttpBin(res response.ResponseWriter, req *request.Request) *response.
 		}
 	}
 
-	res.WriteStatusLine(response.Ok)
-
 	internalHeaders := headers.NewHeaders()
 	for key, values := range resHttpBin.Header {
 		for _, value := range values {
@@ -109,7 +103,7 @@ func handleHttpBin(res response.ResponseWriter, req *request.Request) *response.
 	internalHeaders.Add("Trailer", "X-Content-SHA256")
 	internalHeaders.Add("Trailer", "X-Content-Length")
 
-	res.WriteHeaders(internalHeaders)
+	res.WriteHeaders(response.Ok, internalHeaders)
 
 	buffer := make([]byte, 1024)
 	data := []byte{}
@@ -140,13 +134,12 @@ func handleHttpBin(res response.ResponseWriter, req *request.Request) *response.
 	trailers.Add("X-Content-SHA256", strSha)
 	trailers.Add("X-Content-Length", strconv.Itoa(len(data)))
 
-	res.WriteHeaders(trailers)
+	res.WriteTrailers(trailers)
 
 	return nil
 }
 
 func handleMyProblem(res response.ResponseWriter, req *request.Request) *response.HandlerError {
-	res.WriteStatusLine(response.InternalServerError)
 	h := headers.NewHeaders()
 
 	body := `<html>
@@ -164,7 +157,7 @@ func handleMyProblem(res response.ResponseWriter, req *request.Request) *respons
 	h.Add("Content-type", "text/html")
 	h.Add("Content-length", strconv.Itoa(len(bytes)))
 
-	res.WriteHeaders(h)
+	res.WriteHeaders(response.InternalServerError, h)
 	res.WriteBody(bytes)
 
 	return nil

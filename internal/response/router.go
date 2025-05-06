@@ -150,6 +150,7 @@ func (r *Router) Handle(res ResponseWriter) {
 	req, err := request.RequestFromReader(res.Conn)
 	if err != nil {
 		log.Printf("Error handling connection from %s: %v", res.Conn.RemoteAddr(), err)
+		return
 	}
 
 	method := HttpMethod(req.RequestLine.Method)
@@ -204,51 +205,8 @@ func PrintRouterTree(node *RouterNode, indent string) {
 	}
 }
 
-// func (r *Router) AddHandler(method HttpMethod, path string, h Handler) {
-// 	path = strings.ToLower(string(method) + " " + path)
-
-// 	if _, ok := r.PathToHandlerMap[path]; ok {
-// 		log.Printf("Path '%s' already has a handler, no new changes were made\n", path)
-// 		return
-// 	}
-
-// 	r.PathToHandlerMap[path] = h
-// }
-
-// func (r *Router) Handle(res ResponseWriter) {
-// 	defer res.Conn.Close()
-
-// 	req, err := request.RequestFromReader(res.Conn)
-// 	if err != nil {
-// 		log.Printf("Error handling connection from %s: %v", res.Conn.RemoteAddr(), err)
-// 	}
-
-// 	fmt.Println("Request line:")
-// 	fmt.Printf("- Method: %s\n", req.RequestLine.Method)
-// 	fmt.Printf("- Target: %s\n", req.RequestLine.RequestTarget)
-// 	fmt.Printf("- Version: %s\n", req.RequestLine.HttpVersion)
-
-// 	path := strings.ToLower(req.RequestLine.Method + " " + req.RequestLine.RequestTarget)
-
-// 	handler, ok := r.PathToHandlerMap[path]
-
-// 	// Retarded default message if path not find, TODO: change this
-// 	if !ok {
-// 		Custom404Response(res)
-// 		return
-// 	}
-
-// 	hErr := handler(res, req)
-
-// 	if hErr != nil {
-// 		res.RespondWithHandleError(hErr)
-// 		return
-// 	}
-// }
-
 // Custom 404 if path not found
 func Custom404Response(res ResponseWriter) {
-	res.WriteStatusLine(Ok)
 	h := headers.NewHeaders()
 
 	body := `<html>
@@ -266,6 +224,6 @@ func Custom404Response(res ResponseWriter) {
 	h.Add("Content-type", "text/html")
 	h.Add("Content-length", strconv.Itoa(len(bytes)))
 
-	res.WriteHeaders(h)
+	res.WriteHeaders(Ok, h)
 	res.WriteBody(bytes)
 }

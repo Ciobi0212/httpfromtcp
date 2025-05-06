@@ -12,7 +12,7 @@ type ResponseWriter struct {
 	Conn net.Conn
 }
 
-func (w *ResponseWriter) WriteStatusLine(statusCode StatusCode) error {
+func (w *ResponseWriter) writeStatusLine(statusCode StatusCode) error {
 	switch statusCode {
 	case Ok:
 		_, err := w.Conn.Write([]byte("HTTP/1.1 200 OK" + crlf))
@@ -30,7 +30,12 @@ func (w *ResponseWriter) WriteStatusLine(statusCode StatusCode) error {
 	}
 }
 
-func (w *ResponseWriter) WriteHeaders(h headers.Headers) error {
+func (w *ResponseWriter) WriteHeaders(statusCode StatusCode, h headers.Headers) error {
+	err := w.writeStatusLine(statusCode)
+	if err != nil {
+		return fmt.Errorf("failed to write status line when sending headers: %w", err)
+	}
+
 	for key, value := range h {
 		str := fmt.Sprintf("%s: %s%s", key, value, crlf)
 
@@ -40,7 +45,7 @@ func (w *ResponseWriter) WriteHeaders(h headers.Headers) error {
 		}
 	}
 
-	_, err := w.Conn.Write([]byte(crlf))
+	_, err = w.Conn.Write([]byte(crlf))
 	if err != nil {
 		return fmt.Errorf("failed to write final CRLF after headers: %w", err)
 	}
@@ -58,16 +63,11 @@ func (w *ResponseWriter) WriteBody(p []byte) error {
 }
 
 func (w *ResponseWriter) RespondWithHandleError(e *HandlerError) error {
-	err := w.WriteStatusLine(e.StatusCode)
-	if err != nil {
-		return fmt.Errorf("failed to write status line when responding with handle error '%s': %w", e.Error(), err)
-	}
-
 	body := e.Error()
 
 	bytes := []byte(body)
 
-	w.WriteHeaders(headers.GetDefaultHeaders(len(bytes)))
+	w.WriteHeaders(e.StatusCode, headers.GetDefaultHeaders(len(bytes)))
 
 	w.WriteBody(bytes)
 
@@ -101,6 +101,25 @@ func (w *ResponseWriter) WriteChunkedBodyDone() error {
 	_, err := w.Conn.Write([]byte(str))
 	if err != nil {
 		return fmt.Errorf("failed to write chunked body done: %w", err)
+	}
+
+	return nil
+}
+
+func (w *ResponseWriter) WriteTrailers(trailers headers.Headers) error {
+
+	for key, value := range trailers {
+		str := fmt.Sprintf("%s: %s%s", key, value, crlf)
+
+		_, err := w.Conn.Write([]byte(str))
+		if err != nil {
+			return fmt.Errorf("failed to write header '%s': %w", key, err)
+		}
+	}
+
+	_, err := w.Conn.Write([]byte(crlf))
+	if err != nil {
+		return fmt.Errorf("failed to write final CRLF after headers: %w", err)
 	}
 
 	return nil
