@@ -4,11 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/Ciobi0212/httpfromtcp/internal/headers"
+	"github.com/Ciobi0212/httpfromtcp/headers"
 )
 
 type RequestLine struct {
@@ -22,6 +23,7 @@ type Request struct {
 	Headers     headers.Headers
 	Body        []byte
 	PathParams  map[string]string
+	QueryParams map[string]string
 	State       int
 }
 
@@ -89,6 +91,13 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error reading from io.Reader: %w", err)
 		}
+	}
+
+	// Reading the request from the wire it's done, try to process query paramaters if possible
+	idxOfQuestionMark, _ := addQueryParams(req)
+
+	if idxOfQuestionMark != -1 {
+		req.RequestLine.RequestTarget = req.RequestLine.RequestTarget[:idxOfQuestionMark]
 	}
 
 	return req, nil
@@ -217,4 +226,43 @@ func parseRequestLine(bytes []byte) (RequestLine, int, error) {
 	}
 
 	return reqLine, idx + len(crlf), nil
+}
+
+func addQueryParams(req *Request) (int, error) {
+	path := req.RequestLine.RequestTarget
+
+	idx := strings.IndexByte(path, '?')
+	if idx == -1 {
+		return -1, nil
+	}
+
+	queryString := path[idx+1:]
+	keyValuePairs := strings.Split(queryString, "&")
+	queryParams := make(map[string]string)
+
+	for _, keyValuePair := range keyValuePairs {
+		split := strings.Split(keyValuePair, "=")
+		// !--! IGNORED ERRORS, TO FIX LATER !--!
+		if split[0] == "" {
+			continue
+		}
+
+		key, err := url.QueryUnescape(split[0])
+		if err != nil {
+			return idx, fmt.Errorf("query unescape error in key: %s: %w", key, err)
+		}
+		value := ""
+
+		if len(split) == 2 {
+			value, err = url.QueryUnescape(split[1])
+			if err != nil {
+				return idx, fmt.Errorf("query unescape error in value: %s: %w", value, err)
+			}
+		}
+
+		queryParams[key] = value
+	}
+
+	req.QueryParams = queryParams
+	return idx, nil
 }

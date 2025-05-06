@@ -1,8 +1,6 @@
 package response
 
-import (
-	"github.com/Ciobi0212/httpfromtcp/internal/request"
-)
+import "github.com/Ciobi0212/httpfromtcp/request"
 
 type HandlerError struct {
 	StatusCode StatusCode

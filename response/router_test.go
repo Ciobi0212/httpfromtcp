@@ -3,7 +3,7 @@ package response
 import (
 	"testing"
 
-	"github.com/Ciobi0212/httpfromtcp/internal/request"
+	"github.com/Ciobi0212/httpfromtcp/request"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

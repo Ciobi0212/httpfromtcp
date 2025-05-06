@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"github.com/Ciobi0212/httpfromtcp/internal/response"
+	"github.com/Ciobi0212/httpfromtcp/response"
 )
 
 type Server struct {
@@ -33,9 +33,7 @@ func Serve(port int) (*Server, error) {
 		Router:   response.NewRouter(),
 	}
 
-	go func() {
-		server.listen()
-	}()
+	go server.listen()
 
 	return &server, nil
 }

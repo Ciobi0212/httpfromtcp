@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Ciobi0212/httpfromtcp/internal/headers"
-	"github.com/Ciobi0212/httpfromtcp/internal/request"
+	"github.com/Ciobi0212/httpfromtcp/headers"
+	"github.com/Ciobi0212/httpfromtcp/request"
 )
 
 type HttpMethod string

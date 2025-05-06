@@ -5,7 +5,7 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/Ciobi0212/httpfromtcp/internal/headers"
+	"github.com/Ciobi0212/httpfromtcp/headers"
 )
 
 type ResponseWriter struct {
