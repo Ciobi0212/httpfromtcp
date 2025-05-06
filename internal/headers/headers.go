@@ -33,6 +33,12 @@ func (h *Headers) Add(key string, value string) {
 	}
 }
 
+func (h *Headers) Del(key string) {
+	headerMap := *h
+	key = strings.ToLower(key)
+	delete(headerMap, key)
+}
+
 func (h *Headers) ParseHeader(bytes []byte) (bytesConsumed int, doubleCrlfFlag bool, err error) {
 	str := string(bytes)
 

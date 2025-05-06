@@ -46,6 +46,12 @@ const (
 	Done
 )
 
+func (req *Request) GetPathParam(paramName string) string {
+	paramName = strings.ToLower(paramName)
+
+	return req.PathParams[paramName]
+}
+
 func RequestFromReader(reader io.Reader) (*Request, error) {
 	buffer := make([]byte, bufferSize)
 	var accumulatedBytes []byte

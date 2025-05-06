@@ -1,8 +1,12 @@
 package main
 
 import (
-	"fmt"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -26,13 +30,34 @@ func main() {
 
 	server.Router.AddHandler(response.GET, "/yourproblem", handleYourProblem)
 	server.Router.AddHandler(response.GET, "/myproblem", handleMyProblem)
-	server.Router.AddHandler(response.GET, "/yourproblem/{name}", handleYourProblemWithName)
+	server.Router.AddHandler(response.GET, "/httpbin/html", handleHttpBin)
+	server.Router.AddHandler(response.GET, "/video", handleVideo)
 	response.PrintRouterTree(server.Router.Root, "")
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
 	log.Println("Server gracefully stopped")
+}
+
+func handleVideo(res response.ResponseWriter, req *request.Request) *response.HandlerError {
+	video, err := os.ReadFile("/home/ciobi/projects/boot.dev/httpfromtcp/assets/vim.mp4")
+	if err != nil {
+		log.Println(err)
+		return &response.HandlerError{
+			StatusCode: response.InternalServerError,
+			Message:    "error reading video into memory",
+		}
+	}
+
+	res.WriteStatusLine(response.Ok)
+	headers := headers.NewHeaders()
+	headers.Add("Content-type", "video/mp4")
+	res.WriteHeaders(headers)
+
+	res.WriteBody(video)
+
+	return nil
 }
 
 func handleYourProblem(res response.ResponseWriter, req *request.Request) *response.HandlerError {
@@ -60,29 +85,62 @@ func handleYourProblem(res response.ResponseWriter, req *request.Request) *respo
 	return nil
 }
 
-func handleYourProblemWithName(res response.ResponseWriter, req *request.Request) *response.HandlerError {
-	name := req.PathParams["name"]
+func handleHttpBin(res response.ResponseWriter, req *request.Request) *response.HandlerError {
+	resHttpBin, err := http.Get("https://httpbin.org/html")
+	if err != nil {
+		return &response.HandlerError{
+			StatusCode: response.InternalServerError,
+			Message:    "couldn't get response from http bin server",
+		}
+	}
 
-	res.WriteStatusLine(response.BadRequest)
-	h := headers.NewHeaders()
+	res.WriteStatusLine(response.Ok)
 
-	body := fmt.Sprintf(`<html>
-	<head>
-	  <title>400 Bad Request</title>
-	</head>
-	<body>
-	  <h1>Bad Request</h1>
-	  <p>Your request honestly kinda sucked %s. </p> 
-	</body>
-  </html>`, name)
+	internalHeaders := headers.NewHeaders()
+	for key, values := range resHttpBin.Header {
+		for _, value := range values {
+			internalHeaders.Add(key, value)
+		}
+	}
 
-	bytes := []byte(body)
+	internalHeaders.Del("Content-length")
+	internalHeaders.Add("Transfer-encoding", "chunked")
 
-	h.Add("Content-type", "text/html")
-	h.Add("Content-length", strconv.Itoa(len(bytes)))
+	internalHeaders.Add("Trailer", "X-Content-SHA256")
+	internalHeaders.Add("Trailer", "X-Content-Length")
 
-	res.WriteHeaders(h)
-	res.WriteBody(bytes)
+	res.WriteHeaders(internalHeaders)
+
+	buffer := make([]byte, 1024)
+	data := []byte{}
+
+	for {
+		n, err := resHttpBin.Body.Read(buffer)
+		if errors.Is(err, io.EOF) {
+			res.WriteChunkedBodyDone()
+			break
+		}
+
+		if err != nil {
+			return &response.HandlerError{
+				StatusCode: response.InternalServerError,
+				Message:    "couldn't read bytes from http bin response",
+			}
+		}
+
+		data = append(data, buffer[:n]...)
+		res.WriteChunkedBody(buffer[:n])
+	}
+
+	sha := sha256.Sum256(data)
+
+	strSha := hex.EncodeToString(sha[:])
+
+	trailers := headers.NewHeaders()
+	trailers.Add("X-Content-SHA256", strSha)
+	trailers.Add("X-Content-Length", strconv.Itoa(len(data)))
+
+	res.WriteHeaders(trailers)
 
 	return nil
 }

@@ -73,7 +73,7 @@ func NewRouter() *Router {
 }
 
 func isPathParam(segment string) bool {
-	return (segment[0] == '{' && segment[len(segment)-1] == '}')
+	return len(segment) > 2 && (segment[0] == '{' && segment[len(segment)-1] == '}')
 }
 
 func (r *Router) AddHandler(method HttpMethod, path string, h Handler) {
@@ -128,7 +128,7 @@ func (r *Router) GetHandlerAndPathParamsForPath(method HttpMethod, path string) 
 
 		if ok {
 			curNode = child
-		} else if curNode.ParamChildren != nil {
+		} else if curNode.ParamChildren != nil && !isPathParam(segment) {
 			curNode = curNode.ParamChildren
 			pathParams[curNode.ParamaterName] = segment
 		} else {
@@ -138,6 +138,9 @@ func (r *Router) GetHandlerAndPathParamsForPath(method HttpMethod, path string) 
 	}
 
 	h, ok := curNode.Handlers[method]
+	if !ok {
+		pathParams = nil
+	}
 	return h, pathParams, ok
 }
 
