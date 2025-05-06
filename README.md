@@ -25,17 +25,17 @@
 
 To build an HTTP server using this toolkit, you would typically:
 
-1.  **Initialize the Server Core (`server` package):
+1.  **Initialize the Server Core (`server.Serve(port)`):
     *   Starts a TCP listener on a specified port.
     *   The core component manages incoming connections, typically launching a new goroutine for each to handle requests concurrently.
     *   It utilizes a router for dispatching requests.
 
-2.  **Define Request Handlers (`response` package):
+2.  **Define Request Handlers:
     *   Create functions that process incoming requests and generate responses.
     *   These handlers receive a `request.Request` object (containing parsed data) and a `response.ResponseWriter` (for sending the reply).
     *   Signature: `func(response.ResponseWriter, *request.Request) *response.HandlerError`
 
-3.  **Configure Routing (`response` package):
+3.  **Configure Routing:
     *   Use `router.AddHandler(method, path, handlerFunc)` to map URL paths and HTTP methods to your defined handler functions.
     *   The router will parse path parameters (e.g., `{id}`) and query paramaters (e.g., `?name=andrew&isAdmin=false`) and make them available in `request.Request.PathParams` and `request.Request.QueryParams`.
 
