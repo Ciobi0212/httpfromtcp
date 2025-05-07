@@ -67,7 +67,13 @@ func (w *ResponseWriter) RespondWithHandleError(e *HandlerError) error {
 	body := e.Error()
 
 	bytes := []byte(body)
-	w.Headers = headers.GetDefaultHeaders(len(bytes))
+
+	defaultHeaders := headers.GetDefaultHeaders(len(bytes))
+
+	for key, value := range defaultHeaders {
+		w.Headers.Add(key, value)
+	}
+
 	w.WriteHeaders(e.StatusCode)
 
 	w.WriteBody(bytes)

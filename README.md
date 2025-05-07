@@ -66,7 +66,7 @@ To build an HTTP server using this toolkit, you would typically:
 
 **1. Installation (for users of your library):**
    ```bash
-   go get github.com/Ciobi0212/httpfromtcp
+   go get github.com/Ciobi0212/minihttpserver
    ```
 
 **2. Importing and Using in Their Code:**
@@ -83,10 +83,10 @@ To build an HTTP server using this toolkit, you would typically:
        "syscall"
 
        // Import paths for your library packages
-       "github.com/Ciobi0212/httpfromtcp/headers"
-       "github.com/Ciobi0212/httpfromtcp/request"
-       "github.com/Ciobi0212/httpfromtcp/response"
-       "github.com/Ciobi0212/httpfromtcp/server"
+       "github.com/Ciobi0212/minihttpserver/headers"
+       "github.com/Ciobi0212/minihttpserver/request"
+       "github.com/Ciobi0212/minihttpserver/response"
+       "github.com/Ciobi0212/minihttpserver/server"
    )
 
    // Example Handler
