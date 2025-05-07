@@ -9,7 +9,8 @@ import (
 )
 
 type ResponseWriter struct {
-	Conn net.Conn
+	Conn    net.Conn
+	Headers headers.Headers
 }
 
 func (w *ResponseWriter) writeStatusLine(statusCode StatusCode) error {
@@ -30,13 +31,13 @@ func (w *ResponseWriter) writeStatusLine(statusCode StatusCode) error {
 	}
 }
 
-func (w *ResponseWriter) WriteHeaders(statusCode StatusCode, h headers.Headers) error {
+func (w *ResponseWriter) WriteHeaders(statusCode StatusCode) error {
 	err := w.writeStatusLine(statusCode)
 	if err != nil {
 		return fmt.Errorf("failed to write status line when sending headers: %w", err)
 	}
 
-	for key, value := range h {
+	for key, value := range w.Headers {
 		str := fmt.Sprintf("%s: %s%s", key, value, crlf)
 
 		_, err := w.Conn.Write([]byte(str))
@@ -66,8 +67,8 @@ func (w *ResponseWriter) RespondWithHandleError(e *HandlerError) error {
 	body := e.Error()
 
 	bytes := []byte(body)
-
-	w.WriteHeaders(e.StatusCode, headers.GetDefaultHeaders(len(bytes)))
+	w.Headers = headers.GetDefaultHeaders(len(bytes))
+	w.WriteHeaders(e.StatusCode)
 
 	w.WriteBody(bytes)
 

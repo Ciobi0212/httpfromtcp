@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"sync/atomic"
 
+	"github.com/Ciobi0212/httpfromtcp/headers"
 	"github.com/Ciobi0212/httpfromtcp/response"
 )
 
@@ -61,7 +62,8 @@ func (s *Server) listen() {
 		log.Println("Connection received")
 
 		responseWriter := response.ResponseWriter{
-			Conn: conn,
+			Conn:    conn,
+			Headers: headers.NewHeaders(),
 		}
 
 		go s.Router.Handle(responseWriter)

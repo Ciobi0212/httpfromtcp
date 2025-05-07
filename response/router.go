@@ -6,17 +6,17 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Ciobi0212/httpfromtcp/headers"
 	"github.com/Ciobi0212/httpfromtcp/request"
 )
 
 type HttpMethod string
 
 const (
-	GET    HttpMethod = "GET"
-	PUT    HttpMethod = "PUT"
-	POST   HttpMethod = "POST"
-	DELETE HttpMethod = "DELETE"
+	GET     HttpMethod = "GET"
+	PUT     HttpMethod = "PUT"
+	POST    HttpMethod = "POST"
+	DELETE  HttpMethod = "DELETE"
+	OPTIONS HttpMethod = "OPTIONS"
 )
 
 type RouterNode struct {
@@ -62,18 +62,24 @@ func NewRouterParamNode(paramName string) *RouterNode {
 }
 
 type Router struct {
-	Root *RouterNode
+	Root             *RouterNode
+	GlobalMiddleware []Middleware
 }
 
 func NewRouter() *Router {
 	return &Router{
 		// Root doesn't represent any valid endpoint, just used to serve as root of the tree
-		Root: NewRouterNode(""),
+		Root:             NewRouterNode(""),
+		GlobalMiddleware: []Middleware{},
 	}
 }
 
 func isPathParam(segment string) bool {
 	return len(segment) > 2 && (segment[0] == '{' && segment[len(segment)-1] == '}')
+}
+
+func (r *Router) Use(mw Middleware) {
+	r.GlobalMiddleware = append(r.GlobalMiddleware, mw)
 }
 
 func (r *Router) AddHandler(method HttpMethod, path string, h Handler) {
@@ -153,6 +159,22 @@ func (r *Router) Handle(res ResponseWriter) {
 		return
 	}
 
+	// Wrap serveHttp in middleware
+	currentHandler := r.serveHttp
+	for i := len(r.GlobalMiddleware) - 1; i >= 0; i-- {
+		mw := r.GlobalMiddleware[i]
+		currentHandler = mw(currentHandler)
+	}
+
+	hErr := currentHandler(res, req)
+
+	if hErr != nil {
+		res.RespondWithHandleError(hErr)
+		return
+	}
+}
+
+func (r *Router) serveHttp(res ResponseWriter, req *request.Request) *HandlerError {
 	method := HttpMethod(req.RequestLine.Method)
 	path := strings.ToLower(req.RequestLine.RequestTarget)
 
@@ -161,16 +183,11 @@ func (r *Router) Handle(res ResponseWriter) {
 	// Retarded default message if path not find, TODO: change this
 	if !ok {
 		Custom404Response(res)
-		return
+		return nil
 	}
 
 	req.PathParams = pathParams
-	hErr := handler(res, req)
-
-	if hErr != nil {
-		res.RespondWithHandleError(hErr)
-		return
-	}
+	return handler(res, req)
 }
 
 func PrintRouterTree(node *RouterNode, indent string) {
@@ -207,23 +224,19 @@ func PrintRouterTree(node *RouterNode, indent string) {
 
 // Custom 404 if path not found
 func Custom404Response(res ResponseWriter) {
-	h := headers.NewHeaders()
-
 	body := `<html>
   <head>
-    <title>200 OK</title>
   </head>
   <body>
-    <h1>Success!</h1>
-    <p>Your request was an absolute banger.</p>
+    <h1>404 NOT FOUND</h1>
   </body>
 </html>`
 
 	bytes := []byte(body)
 
-	h.Add("Content-type", "text/html")
-	h.Add("Content-length", strconv.Itoa(len(bytes)))
+	res.Headers.Add("Content-type", "text/html")
+	res.Headers.Add("Content-length", strconv.Itoa(len(bytes)))
 
-	res.WriteHeaders(Ok, h)
+	res.WriteHeaders(BadRequest)
 	res.WriteBody(bytes)
 }
